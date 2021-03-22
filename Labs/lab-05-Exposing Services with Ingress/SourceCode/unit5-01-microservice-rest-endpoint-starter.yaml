@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: rest
+spec:
+#  type: Don't know !
+  ports:
+  - port: 8080
+  selector:
+    app: rest
+
+---
+apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+kind: Deployment
+metadata:
+  name: rest
+spec:
+  selector:
+    matchLabels:
+      app: rest
+  template:
+    metadata:
+      labels:
+        app: rest
+    spec:
+      containers:
+      - image:  quay.io/mromdhani/springboot-microservice:1
+        name: rest
+        env:
+          # Use secret in real usage
+        - name: SPRING_DATASOURCE_URL
+          value: jdbc:mysql://mysql:3306/DockerProductsDB?createDatabaseIfNotExist=true
+        - name: SPRING_DATASOURCE_USERNAME
+          value: root
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: password
+        ports:
+        - containerPort: 8080
+          name: mysql
+        
