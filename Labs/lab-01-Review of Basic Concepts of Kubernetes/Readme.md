@@ -16,6 +16,7 @@
     - [Create a Deployment](#create-a-deployment)
     - [Create a Service](#create-a-service)
     - [Scale the application](#scale-the-application)
+    - [Doing it declaratively (Using YAML manifests)](#doing-it-declaratively-using-yaml-manifests)
 
 # Step 1 - Setting Up  a Kubernetes Cluster
 
@@ -312,5 +313,57 @@ Now let's see again the list of available pods:
 ```shell
 kubectl get pods
 ```
+### Doing it declaratively (Using YAML manifests)
 
+- This is the manifest of the deployment :
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-app
+spec:
+  selector:
+    matchLabels:
+      app: my-app
+  template:
+    metadata:
+      labels:
+        app: my-app
+    spec:
+      containers:
+      - name: my-app
+        image: dockercloud/hello-world
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 80
+```
+Apply the manifest using the command
+```shell
+kubectl apply -f my-hello-deployment.yaml
+```
+- This is the manifest of the service :
 
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-app
+  namespace: default
+spec:
+  selector:
+    app: my-app
+  type: LoadBalancer
+  ports:
+  - name: ports
+    port: 8081
+    targetPort: 80
+    protocol: TCP
+    nodePort: 32000
+```
+Apply the manifest using the command
+```shell
+kubectl apply -f my-hello-service.yaml
+```
