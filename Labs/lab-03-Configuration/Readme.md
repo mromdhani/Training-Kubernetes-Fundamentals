@@ -353,131 +353,39 @@ Both ConfigMaps and Secrets are stored in etcd, but the way you submit secrets i
 In order to deploy MySQL, you will need to mount the Secrets as environment variables and the ConfigMap as a file. First, though, you need to write a Deployment for MySQL so that you have something to work with. Create a file named `unit3-01-mysql-deployment-starter.yaml` with the following content.
   ```yaml
   apiVersion: apps/v1
-  kind: Deployment
-  metadata:
-    name: mysql-deployment
-    labels:
-      app: mysql  
-  spec:
-    replicas: 1
-    selector:
-      matchLabels:
-        app: mysql
-    template:
-      metadata:
-        labels:
-          app: mysql
-      spec:
-        containers:
-        - name: mysql
-          image: quay.io/mromdhani/mysql:8.0
-          ports:
-          - containerPort: 3306
-            protocol: TCP
-          volumeMounts:
-          - mountPath: /var/lib/mysql
-            name: mysql-volume
-        volumes:
-        - emptyDir: {}
-          name: mysql-volume
+kind: Deployment
+metadata:
+  name: backend-mysql
+  labels:
+    app: mysql  
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+        app: bookstore
+        tier: backend-mysql
+  template:
+    metadata:
+      labels:
+        app: bookstore
+        tier: backend-mysql
+    spec:
+      containers:
+      - name: mysql
+        image: quay.io/mromdhani/mysql:8.0
+        env:
+          - name: MYSQL_DATABASE
+            value: bookstoredb
+          - name: MYSQL_ROOT_PASSWORD
+            value: password 
+          - name: MYSQL_PASSWORD
+            value: password         
+        ports:
+        - containerPort: 3306
+          protocol: TCP
   ```
-This is a bare-bones Kubernetes Deployment of the official MySQL 8.2 image from Docker Hub. If you'll try to deploy it, it fails and logs this message: `You need to specify one of MYSQL_ROOT_PASSWORD, MYSQL_ALLOW_EMPTY_PASSWORD and MYSQL_RANDOM_ROOT_PASSWORD"`.
-Let' add  the Secrets and ConfigMap.
-
-- **Deploy the ConfigMap and the Secret resources**
-
- Let's first deploy the ConfigMap and Secret Resources and Check that they have been deployed successfully.
-  - Deploy the ConfigMap and Verify its deployment.
-    ```shell
-    kubectl create -f unit3-01-configmaps.yaml
-    kubectl get configmap mysql-config
-    ```
-  - Deploy the Secrets and Verify its deployment.
-    ```shell
-    kubectl apply -f unit3-01-secrets.yaml
-    kubectl get secret mysql-secrets
-    ```
-- **Add the Secrets to the Deployment as environment variables** 
-   
-   We have two Secrets that need to be added to the Deployment:
-   - The MYSQL_ROOT_PASSWORD (The root password, to add as an environment variable)
-   - The MYSQL_PASSWORD (The default user password, to add as an environment variable)
-  Let's specify the Secret and the key you want by adding an **env list/array** to **the container spec** in the Deployment and setting the environment variable value to the value of the key in your Secret. In this case, the list contains two entries for for the passwords.
-    ```yaml
-    env:
-      - name: MYSQL_ROOT_PASSWORD
-        valueFrom:
-          secretKeyRef:
-            name: mysql-secrets
-            key: root-password
-      - name: MYSQL_PASSWORD
-        valueFrom:
-          secretKeyRef:
-            name: mysql-secrets
-            key: user-password
-    ```
-- **Add the ConfigMaps to the Deployment** 
-   
-  We have to add these configutra:
-   - The MYSQL_DATABASE (The default database to create, to add as an environment varaiable)
-   - The MYSQL_USER (The default user to create, to add as an environment variable)
-   - The cnf configuration entry (To mount as a volume under `/etc/mysql/conf.d/` within the container)
-   
-     - Let's Specify the MYSQL_DATABASE and MYSQL_USER variables by adding them to the existing **env** list/array of **the container spec**.  
-      ```yaml
-      - name: MYSQL_DATABASE
-        valueFrom:
-          configMapKeyRef:
-            name: mysql-config
-            key: DB_NAME
-      - name: MYSQL_USER
-        valueFrom:
-          configMapKeyRef:
-            name: mysql-config
-            key: USER_NAME
-      ```
-    - Let's add a new volume definition under **volumes** section. This volume will be initialized from the ConfigMap (the .cnf key) and will be used to define a new mount path under the  **mountPath** the existing **volumeMounts** section. This mountPath will point to `/etc/mysql/conf.d`.  
-        ```yaml
-           volumeMounts:
-            - mountPath: /var/lib/mysql
-              name: mysql-volume
-            - mountPath: /etc/mysql/conf.d
-              name: mysql-config-volume
-        volumes:
-          - emptyDir: {}
-            name: mysql-volume
-          - configMap:
-              name: mysql-config
-              items:
-              - key: confluence.cnf
-                path: confluence.cnf
-            name: mysql-config-volume
-        ```
-- **Apply the deploymenet and check the configs and the secrets** 
-  - Apply the deployment
-    ```shell
-    kubectl apply -f unit3-01-mysql-deployment-starter.yaml
-    ```
-  - Check that the deployment has succeeded and view the MySQLPod state
-    ```shell
-    kubectl get deploy
-    kubectl get pods
-    ```
-  - Hop into the Pod and check that secrets and the configuration has been applied
-    ```shell
-    kubectl exec -it [PodName] sh  
-    ```
-    From within the Pod shell run
-    ```shell
-    # env
-    # cat /etc/mysql/conf.d/confluence.cnf  
-    ```
-  - Clean Up. Remove the Secret, the ConfigMap and the Deployment
-    ```shell
-    kubectl delete secret mysql-secrets 
-    kubectl delete cm  mysql-config
-    kubectl delete deploy mysql-deployment 
-    ```
+- Deploy this version of MySQL Deployement and Exec into the podin order to check that it works.
+- Elaborate a new version of the deployement where configuration variables are provided in ConfigMas and Secrets. Deploy it and test it. 
 
 # Step 2 - Managing resources for Containers and Pods
 By default, containers run with unbounded compute resources on a Kubernetes cluster. With resource quotas, cluster administrators can restrict resource consumption and creation on a namespace basis.  
